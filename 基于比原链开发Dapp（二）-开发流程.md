@@ -38,8 +38,10 @@
 
 ​       `E:\GoWorks\src\github.com\equity\equity>equity.exe jiedai_6.txt --instance ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff 260374 260474 260574 260674 260774 260874 260874 00141ccef16d2ac1ab22baa8acfa1633fdc32df
 d55aa b1f38553d95177c53755996baf523da006da977008f069792bb6a2c3b6a253fb
+
 ======= PartLoanCollateral =======
 Instantiated program:
+
 20b1f38553d95177c53755996baf523da006da977008f069792bb6a2c3b6a253fb1600141ccef16d2ac1ab22baa8acfa1633fdc32dfd55aa030afb03030afb0303a6fa030342fa0303def903037af9030316f90320ffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
 ffffff4d2b015b7a76529c641d010000640c0100005c7900a0695c790500f2052a01947600a0695379cd9f5579cda09a916164380000005a95639a00000054798ccd9f5679cda09a916164500000005895639a00000055798ccd9f5779cda09a916164680000005695639a00000056798ccd
 9f5879cda09a916164800000005495639a00000057798ccd9f5979cda09a916164980000005295639a0000005195c3787ca169c3787c9f916164f5000000005e795479515e79c1695178c2516079c16952c3527994c251006079895f79895e79895d79895c79895b79895a79895979895879
@@ -47,19 +49,35 @@ ffffff4d2b015b7a76529c641d010000640c0100005c7900a0695c790500f2052a01947600a06953
 
 2）**发合约交易**， 先解释一下合约的逻辑，储蓄分红合约太复杂，所以我们用**币币交易**合约去举例子，
 
-`contract TradeOffer(assetRequested: Asset,
+```go
+contract TradeOffer(assetRequested: Asset,
+
                     amountRequested: Amount,
+
                     seller: Program,
+
                     cancelKey: PublicKey) locks valueAmount of valueAsset {
+
   clause trade() {
+
     lock amountRequested of assetRequested with seller
+
     unlock valueAmount of valueAsset
+
   }
+
   clause cancel(sellerSig: Signature) {
+
     verify checkTxSig(cancelKey, sellerSig)
+
     unlock valueAmount of valueAsset
+
   }
-}`
+
+}
+```
+
+
 
 看看智能合约的交易图，方便小白理解:
 
@@ -79,13 +97,20 @@ PC钱包方式，所有交易都必须三部，build-transaction，sign-transact
 
      解决方案：  
 
-   ​          本地PC钱包solonet模式调试，更改源码，快速出块  difficulty/difficulty.go
+​             本地PC钱包solonet模式调试，更改源码，快速出块  difficulty/difficulty.go
 
-   ​           `func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool {   compareHash := tensority.AIHash.Hash(hash, seed)   return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0}`
+```go
+func CheckProofOfWork(hash, seed *bc.Hash, bits uint64) bool { 
+    compareHash := tensority.AIHash.Hash(hash, seed)   
+    return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0
+}         
+```
 
-   ​       改成
+​          里面那句添加  ||true 如下
 
-   ​      return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0 || true
+```go
+return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0 || true
+```
 
    一开始没想到这样做，以为很快调试好，搞了三天晚上10点才调试完。
 
@@ -93,19 +118,20 @@ PC钱包方式，所有交易都必须三部，build-transaction，sign-transact
 
    3.程序必须计算好对应结果utxo 流转action的 input、ouput ；如下
 
-    `{
-     "base_transaction": null,
-     "actions": [
+```go
+{
+
+ "base_transaction": null,
+ "actions": [
+   {
+     "output_id": "13fbd1e5df196a1488e85e3b5983e51444c49ef3695df789c9473abb636e0f5c",
+     "arguments": [
        {
-         "output_id": "13fbd1e5df196a1488e85e3b5983e51444c49ef3695df789c9473abb636e0f5c",
-         "arguments": [
-           {
-             "type": "integer",
-             "raw_data": {
-               "value": 5500000000
-             }
-           },
-   		{
+         "type": "integer",
+         "raw_data": {
+           "value": 5500000000
+         }
+       },   {
    			"type": "data",
    			"raw_data": {
    				"value": "00141ccef16d2ac1ab22baa8acfa1633fdc32dfd55aa"
@@ -152,7 +178,11 @@ PC钱包方式，所有交易都必须三部，build-transaction，sign-transact
        }
      ],
      "ttl": 10000
-   }`
+   }
+
+```
+
+
 
    一个解锁合约交易要包含action类型有，spend_account_unspent_output (合约的参数)，spend_account (输入的资产描述)，    control_program或者control_address （接收者资产描述），可以理解成**质量守恒**。
 
@@ -160,7 +190,7 @@ PC钱包方式，所有交易都必须三部，build-transaction，sign-transact
 
    spend_account_unspent_output 的action里面有个output_id =13fbd1e5df196a1488e85e3b5983e51444c49ef3695df789c9473abb636e0f5c，这个资产的小数位为8（这里没有体现），代表我要解锁这个utxo，他的值为  100000000.00000000 就是1亿。
 
-拆分成两个action，一个50.00000000，一个99999950.00000000
+拆分成两个action，一个 50.00000000，一个 99999950.00000000
 
 只有btm = ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff 需要用来等手续费，所以允许不守恒，最后由旷工挖矿拿到手续费。
 
@@ -186,9 +216,9 @@ url地址 ：testnet: 'http://app.bycoin.io:3020/', mainnet: 'https://api.bycoin
 
 ##### 参数：
 
-​	`{    
-    "filter": {             
-        "script":"20b1f38553d95177c53755996baf523da006da977008f069792bb6a2c3b6a253fb160014d470cdd1970b58b32c52ecc9e71d795b02c79a6503e1830403e1830403e256040322350403a21e0403e20e040307fb0320ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4d2b015b7a76529c641d010000640c0100005c7900a0695c790500f2052a01947600a0695379cd9f5579cda09a916164380000005a95639a00000054798ccd9f5679cda09a916164500000005895639a0000798ccd9f5779cda09a916164680000005695639a00000056798ccd9f5879cda09a916164800000005495639a00000057798ccd9f5979cda09a916164980000005295639a0000005195c3787ca169c3787c9f916164f5000000005e795479515e79c1695178c2516079c16952c3527994c251006079895f79895e79895d79895c79895b79895a79895979895879895779895679890274787e008901c07ec1696307010000005e795479515e79c16951c3c2516079c169632b010000587acd9f6900c3c2515c7ac1632b010000755b7aaa5b7a8800c3c2515d7ac1747800c0", 
+```go
+{    
+    "filter": {                    "script":"20b1f38553d95177c53755996baf523da006da977008f069792bb6a2c3b6a253fb160014d470cdd1970b58b32c52ecc9e71d795b02c79a6503e1830403e1830403e256040322350403a21e0403e20e040307fb0320ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff4d2b015b7a76529c641d010000640c0100005c7900a0695c790500f2052a01947600a0695379cd9f5579cda09a916164380000005a95639a00000054798ccd9f5679cda09a916164500000005895639a0000798ccd9f5779cda09a916164680000005695639a00000056798ccd9f5879cda09a916164800000005495639a00000057798ccd9f5979cda09a916164980000005295639a0000005195c3787ca169c3787c9f916164f5000000005e795479515e79c1695178c2516079c16952c3527994c251006079895f79895e79895d79895c79895b79895a79895979895879895779895679890274787e008901c07ec1696307010000005e795479515e79c16951c3c2516079c169632b010000587acd9f6900c3c2515c7ac1632b010000755b7aaa5b7a8800c3c2515d7ac1747800c0", 
         "asset":"80013f81a66cb99977879e31639bb4fe4b12b4c7058585d3f7f159d26a9" ,
         "unconfirmed":false
     },    
@@ -196,17 +226,15 @@ url地址 ：testnet: 'http://app.bycoin.io:3020/', mainnet: 'https://api.bycoin
         "by":"amount", 
         "order":"desc" 
         }
-}`
-
-
+}
+```
 
 unconfirmed ，代表是否确认的，这个对后期的并发问题非常有用，第三章我会详细说明。
 
-
-
 ##### 结果
 
-`{
+```go
+{
     "code": 200,
     "msg": "",
     "result": {
@@ -226,9 +254,13 @@ unconfirmed ，代表是否确认的，这个对后期的并发问题非常有�
         "limit": 10,
         "start": 0
     }
-}`
+}
+
+```
 
 （自己准备参数调用一下，以上是例子而已）
+
+
 
 ### 查询用户地址信息与余额接口
 
@@ -242,43 +274,84 @@ unconfirmed ，代表是否确认的，这个对后期的并发问题非常有�
 
 #### 结果
 
- `{
-	"code": 200,
-	"msg": "",
-	"result": {
-		"_links": {},
-		"data": [{
-			"guid": "b414005b-b501-4a0e-8b0f-e1cd762272f4",
-			"address": "bm1qp4t6thlyktt6sh02scs8dqcpnk3ufk9e9pmq9s",
-			"label": "",
-			"balances": [{
-				"asset": "80013f81a66cb99977879e31639bb4fe4b12b4c7050fe518585d3f7f159d26a9",
-				"balance": "68900000000",
-				"total_received": "69000000000",
-				"total_sent": "100000000",
-				"decimals": 8,
-				"alias": "",
-				"in_usd": "0.00",
-				"in_cny": "0.00",
-				"in_btc": "0.000000"
-			}, {
-				"asset": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-				"balance": "1329551000",
-				"total_received": "53790000000",
-				"total_sent": "52460449000",
-				"decimals": 8,
-				"alias": "btm",
-				"in_usd": "1.45",
-				"in_cny": "10.10",
-				"in_btc": "0.000142"
-			}]
-		}],
-		"limit": 10,
-		"start": 0
-	}
-}`
+```go
+{
 
-ps:guid是专门插件钱包提供的，是唯一的，这个非常有用，第三章我会详细说。
+	"code": 200,
+
+	"msg": "",
+
+	"result": {
+
+		"_links": {},
+
+		"data": [{
+
+			"guid": "b414005b-b501-4a0e-8b0f-e1cd762272f4",
+
+			"address": "bm1qp4t6thlyktt6sh02scs8dqcpnk3ufk9e9pmq9s",
+
+			"label": "",
+
+			"balances": [{
+
+				"asset": "80013f81a66cb99977879e31639bb4fe4b12b4c7050fe518585d3f7f159d26a9",
+
+				"balance": "68900000000",
+
+				"total_received": "69000000000",
+
+				"total_sent": "100000000",
+
+				"decimals": 8,
+
+				"alias": "",
+
+				"in_usd": "0.00",
+
+				"in_cny": "0.00",
+
+				"in_btc": "0.000000"
+
+			}, {
+
+				"asset": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+
+				"balance": "1329551000",
+
+				"total_received": "53790000000",
+
+				"total_sent": "52460449000",
+
+				"decimals": 8,
+
+				"alias": "btm",
+
+				"in_usd": "1.45",
+
+				"in_cny": "10.10",
+
+				"in_btc": "0.000142"
+
+			}]
+
+		}],
+
+		"limit": 10,
+
+		"start": 0
+
+	}
+
+}
+
+```
+
+**ps:**
+
+​	guid是专门插件钱包提供的，是唯一的，这个非常有用，第三章我会详细说。
+
+
 
 
 
@@ -286,17 +359,14 @@ ps:guid是专门插件钱包提供的，是唯一的，这个非常有用，第�
 
 /api/v1/btm/account/list-transactions 
 
-
-
 #### 参数
 
  `{"address":"bm1qp4t6thlyktt6sh02scs8dqcpnk3ufk9e9pmq9s","start":0,"limit":100} `
 
-
-
 #### 结果
 
-`{
+```go
+{
 	"code": 200,
 	"msg": "",
 	"result": {
@@ -346,9 +416,9 @@ ps:guid是专门插件钱包提供的，是唯一的，这个非常有用，第�
 			"InputAmount": 5200000000
 		}]
 	}
-}`
+}
 
-
+```
 
 5）开发后端，相当于bufferserver，第三章详细说明顺便我解析一下bufferserver的源码内容，还有里面踩过的坑。
 
@@ -356,4 +426,4 @@ ps:guid是专门插件钱包提供的，是唯一的，这个非常有用，第�
 
 总结：
 
-​	这一章内容主要比较繁琐强调是调试合约方面，就是最核心的问题，这里抛出一个问题，就是UTXO问题，调试过程中非常繁琐，本来区块链不是做高并发，但是也存在并发问题，应该如何解决？  有使用过PC钱包的朋友肯定知道，里面PC钱包的UTXO，在交易过程中锁定了，没办法操作下一个，有些很多UTXO还好，如果只有一个，基本上调试跟实用都很麻烦~~~第三章我们基于原有bufferserver基础上根据官方的方案改一下，一定程度解决并发问题，大家期待一下。
+​	这一章内容主要比较繁琐强调是调试合约方面，就是最核心的问题，这里抛出一个问题，就是UTXO问题，调试过程中非常繁琐，本来区块链不是做高并发，但是也存在并发问题，应该如何解决？  有使用过PC钱包的朋友肯定知道，里面PC钱包的UTXO，在交易过程中锁定了，没办法操作下一个，有些很多UTXO还好，如果只有一个，基本上调试跟实用都很麻烦~~~第三章我们基于原有**bufferserver**基础上根据官方的方案改一下，一定程度解决并发问题，大家期待一下。
