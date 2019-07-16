@@ -184,9 +184,19 @@ return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0 || true
 
 
 
-   一个解锁合约交易要包含action类型有，spend_account_unspent_output (合约的参数)，spend_account (输入的资产描述)，    control_program或者control_address （接收者资产描述），可以理解成**质量守恒**。
+   一个解锁合约交易要包含action类型有，
 
- 如上面例子 
+**spend_account_unspent_output** (合约的参数)，
+
+**spend_account** (输入的资产描述)，    
+
+**control_program或者control_address** （接收者资产描述），
+
+可以理解成**质量守恒**。
+
+ 
+
+如上面例子 
 
    spend_account_unspent_output 的action里面有个output_id =13fbd1e5df196a1488e85e3b5983e51444c49ef3695df789c9473abb636e0f5c，这个资产的小数位为8（这里没有体现），代表我要解锁这个utxo，他的值为  100000000.00000000 就是1亿。
 
@@ -197,6 +207,10 @@ return HashToBig(compareHash).Cmp(CompactToBig(bits)) <= 0 || true
 
 
 **总结**：那么程序相当于要把合约里面的逻辑整合进去，才能计算好真正的input、output~~我理解是交易确认的时候，解锁合约的程序验证现在的input、ouput是否跟合约一样。
+
+
+
+
 
 
 
